@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Script from 'next/script';
 
 declare global {
@@ -13,13 +13,54 @@ declare global {
   }
 }
 
+interface DriftData {
+  accountValue: string | null;
+  pnl: string | null;
+  pnlPercent: string | null;
+  lastUpdated: string;
+  error?: string;
+}
+
 export default function Home() {
+  const [driftData, setDriftData] = useState<DriftData | null>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     // Reload Twitter widgets after component mounts
     if (window.twttr?.widgets) {
       window.twttr.widgets.load();
     }
+
+    // Fetch Drift data
+    const fetchDriftData = async () => {
+      try {
+        const res = await fetch('/api/drift');
+        const data = await res.json();
+        setDriftData(data);
+      } catch (err) {
+        console.error('Failed to fetch drift data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDriftData();
+
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchDriftData, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  const formatPnl = (value: string | null) => {
+    if (!value) return '+0.00%';
+    const num = parseFloat(value);
+    return num >= 0 ? `+${num.toFixed(2)}%` : `${num.toFixed(2)}%`;
+  };
+
+  const formatUsd = (value: string | null) => {
+    if (!value) return '$0.00';
+    return `$${parseFloat(value).toFixed(2)}`;
+  };
 
   return (
     <>
@@ -47,6 +88,41 @@ export default function Home() {
             indicative of future results. This is not financial advice.
           </div>
 
+          <section className="text-center py-12 bg-gray-900 rounded-lg border border-red-600 mb-12">
+            <h2 className="font-orbitron text-3xl text-red-500 mb-8">Live Performance</h2>
+            {loading ? (
+              <div className="animate-pulse">
+                <p className="text-6xl font-bold mb-4 text-gray-600">Loading...</p>
+              </div>
+            ) : (
+              <>
+                <p className={`text-6xl font-bold mb-4 ${
+                  driftData?.pnlPercent && parseFloat(driftData.pnlPercent) >= 0
+                    ? 'text-green-500'
+                    : 'text-red-500'
+                }`}>
+                  {formatPnl(driftData?.pnlPercent ?? null)}
+                </p>
+                <p className="text-2xl mb-2">
+                  Account Value: <span className="text-white font-bold">{formatUsd(driftData?.accountValue ?? null)}</span>
+                </p>
+                <p className="text-lg text-gray-400">
+                  PnL: <span className={
+                    driftData?.pnl && parseFloat(driftData.pnl) >= 0
+                      ? 'text-green-500'
+                      : 'text-red-500'
+                  }>
+                    {driftData?.pnl && parseFloat(driftData.pnl) >= 0 ? '+' : ''}{formatUsd(driftData?.pnl ?? null)}
+                  </span>
+                  {' '}from $83.81 initial
+                </p>
+                <p className="text-sm text-gray-500 mt-4">
+                  Live from Drift Protocol · Updates every 30s
+                </p>
+              </>
+            )}
+          </section>
+
           <section className="bg-gray-900 p-10 rounded-lg border border-gray-700 mb-12">
             <h2 className="font-orbitron text-3xl text-red-500 mb-8 text-center">Live Trading Feed</h2>
             <div className="flex justify-center">
@@ -54,12 +130,6 @@ export default function Home() {
                 <a href="https://twitter.com/PrimusQuant"></a>
               </blockquote>
             </div>
-          </section>
-
-          <section className="text-center py-12 bg-gray-900 rounded-lg border border-red-600 mb-12">
-            <h2 className="font-orbitron text-3xl text-red-500 mb-8">Live Performance</h2>
-            <p className="text-6xl font-bold mb-4">+0.00%</p>
-            <p className="text-lg">Developer capital only · Real-time PnL tracking</p>
           </section>
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">
