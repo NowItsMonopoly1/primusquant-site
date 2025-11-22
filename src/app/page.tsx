@@ -3,6 +3,16 @@
 import { useEffect } from 'react';
 import Script from 'next/script';
 
+declare global {
+  interface Window {
+    twttr?: {
+      widgets?: {
+        load: () => void;
+      };
+    };
+  }
+}
+
 export default function Home() {
   useEffect(() => {
     // Reload Twitter widgets after component mounts
@@ -14,7 +24,7 @@ export default function Home() {
   return (
     <>
       <div className="min-h-screen bg-black text-gray-300">
-        <header className="min-h-screen flex flex-col justify-center items-center text-center px-8 bg-gradient-radial from-gray-900 via-black to-black">
+        <header className="min-h-screen flex flex-col justify-center items-center text-center px-8 bg-black">
           <h1 className="font-orbitron text-5xl md:text-8xl font-bold tracking-[0.25em] text-white mb-8">
             PRIMUSQUANT
           </h1>
